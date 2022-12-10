@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Replace these with your own Spotify API credentials
-client_id = os.getenv("SPOTIPY_CLIENT_ID")
-client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
+client_id = os.getenv("SPOTIFY_CLIENT_ID")
+client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 
 
 def SpotifyData():
@@ -43,6 +43,16 @@ def SpotifyData():
         json.dump(songs, f)
 
 
+def FileCheck():
+    if os.path.exists("response.json"):
+        overwrite = input("File already exists! Would you like to overwrite it? (y/n)")
+        if overwrite == "y":
+            os.remove("response.json")
+            print("Overwriting...")
+        else:
+            print("Skipping overwrite...")
+
+
 def ChorusAPIQuery():
     with open("songs.json") as json_file:
         data = json.load(json_file)
@@ -56,7 +66,7 @@ def ChorusAPIQuery():
             "https://chorus.fightthe.pw/api/search/", params={"query": search}
         )
 
-        if os.stat("response.json").st_size == 0:
+        if not os.path.exists("response.json"):
             # Initialize the file with an empty songs array
             existing_data = {"songs": []}
         else:
@@ -66,11 +76,15 @@ def ChorusAPIQuery():
 
         # Append the response to the existing JSON data
         if "songs" in response.json() and response.json()["songs"]:
-            new_song = {
-                "name": response.json()["name"],
-                "link": response.json()["link"],
-                "directLinks": response.json()["directLinks"],
-            }
+            for i in range(len(response.json()["songs"])):
+                new_song = {
+                    "songs": {
+                        "name": response.json()["songs"][i]["name"],
+                        "link": response.json()["songs"][i]["link"],
+                        "directLinks": response.json()["songs"][i]["directLinks"],
+                    }
+                }
+
             existing_data["songs"].append(new_song)
 
         # Write the combined data back to the file
@@ -82,11 +96,13 @@ def ChorusAPIParse():
     with open("response.json") as f:
         api_response = json.load(f)
 
-    for song in api_response[0]["songs"]:
-        print(f"Name: {song['name']}")
-        print(f"Link: {song['link']}")
+    for song in api_response["songs"]:
+        print(f"Name: {song['songs']['name']}")
+        print(f"Link: {song['songs']['link']}")
+        print(f"DL: {song['songs']['directLinks']['archive']}")
 
 
 SpotifyData()
+FileCheck()
 ChorusAPIQuery()
 ChorusAPIParse()

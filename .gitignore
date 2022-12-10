@@ -2,6 +2,7 @@
 .env
 .vscode/
 songs.json
+response.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
