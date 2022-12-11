@@ -12,6 +12,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 import re
 import io
 
@@ -24,7 +25,7 @@ client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 creds = service_account.Credentials.from_service_account_file("service_account.json")
 if True:
     flow = InstalledAppFlow.from_client_secrets_file(
-        "client_secrets.json", scopes=["https://www.googleapis.com/auth/drive.file"]
+        "client_secrets.json", scopes=["https://www.googleapis.com/auth/drive"]
     )
     creds = flow.run_console()
 
@@ -117,6 +118,33 @@ def ChorusAPIQuery():
             json.dump(existing_data, f)
 
 
+def DriveDownload(real_file_id, file_path):
+
+    try:
+
+        service = build("drive", "v3", credentials=creds)
+
+        file_id = real_file_id
+        file_metadata = service.files().get(fileId=file_id).execute()
+        file_name = file_metadata["name"]
+        file_path = file_path
+        file_path_join = os.path.join(file_path, file_name)
+
+        request = service.files().get_media(fileId=file_id)
+        file = io.BytesIO()
+        downloader = MediaIoBaseDownload(file, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            print(f"File downloaded: {file_name}")
+
+        with open(file_path_join, "wb") as f:
+            f.write(file.getvalue())
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        file = None
+
+
 def ChorusAPIParse():
     with open("response.json") as f:
         api_response = json.load(f)
@@ -167,16 +195,14 @@ def ChorusAPIParse():
                         print(f"Invalid URL: " + url)
                         print(f"Exception: {e}")
                 else:
-                    service = build("drive", "v3", credentials=creds)
-                    file_id = re.split(r"=|&", url)
-                    print(file_id)
-                    request = service.files().get_media(fileId=file_id[1])
-                    fh = io.BytesIO()
-                    downloader = MediaIoBaseDownload(fh, request)
-                    done = False
-                    while done is False:
-                        status, done = downloader.next_chunk()
-                        print("Download %d%%." % int(status.progress() * 100))
+                    try:
+                        file_id_parse = re.split(r"=|&", url)
+                        file_path = os.path.join("songs", (song["songs"]["name"]))
+                        DriveDownload(
+                            real_file_id=file_id_parse[1], file_path=file_path
+                        )
+                    except Exception as e:
+                        print(e)
 
         # print(f"Link: {song['songs']['link']}")
         # print(f"DL: {song['songs']['directLinks']['archive']}")
