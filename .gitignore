@@ -3,6 +3,11 @@
 .vscode/
 songs.json
 response.json
+songs/
+credentials.json
+service_account.json
+client_secrets.json
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
